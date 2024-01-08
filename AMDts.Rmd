@@ -46,12 +46,13 @@ df$Open <- as.numeric(rmvdollar(df$Open))
 df$High <- as.numeric(rmvdollar(df$High))
 df$Close.Last <- as.numeric(rmvdollar(df$Close.Last))
 
-str(df)i
+str(df)
 ```
 
--- Plotting to examine trends
+# Finding a Good Transfromation
 
-```{r , fig.height=15 , fig.width=10}
+```{r , fig.height=15 , fig.width=10, message=FALSE}
+library(TSA)
 par(mfrow=c(4,1))
 for(i in 1:5){
   if(is.numeric(df[,i])){
@@ -100,9 +101,81 @@ for(i in 1:5){
 }
 ```
 
+Let's plot a first difference to see whats what.
+
+```{r , fig.height=10 , fig.width=10}
+par(mfrow=c(3,1))
+for(i in 1:5){
+  if(all(class(df[,i]) == "numeric")){ ## Using all() to avoid a warning
+    y = df[,i]
+    dy = y - zlag(y)
+    plot(
+      df$Date,
+      dy,
+      # c(0,diff(df[,i])), equiv
+      type = "p",
+      xlab="Time (Day)",
+      ylab = paste("Log of Log of " , colnames(df)[i])
+    )
+  }
+}
+```
+
+```{r , fig.height=10 , fig.width=15}
+par(mfrow=c(3,2))
+for(i in 1:5){
+  if(all(class(df[,i]) == "numeric")){ ## Using all() to avoid a warning
+    y = log(df[,i])
+    dy = diff(y)
+    #plot(df$Date, y)
+    plot(df$Date, c(0,dy))
+    acf(c(0,dy))
+  }
+}
+```
+
+We may be better off segmenting data:
+
+```{r , fig.height=10 , fig.width=10}
+df2014_16 = df[1764:nrow(df),]
+par(mfrow=c(3,1))
+for(i in c(2,4,5)){
+  plot(
+    df2014_16$Date,
+    log(df2014_16[,i]),
+    type = "l",
+    xlab="Time (Day)",
+    ylab = paste("Log of " , colnames(df)[i])
+  )
+}
+```
+
+>The industry-standard transformation is to calculate percent returns, via a slight alteration of first-order differencing:
+>
+$$R_t = \frac{P_t}{P_{t-1}} - 1$$
+
+>Where P is price, and t is time. We call this simply “returns.”
+
+>Many academics especially prefer to also take the logarithm:
+
+$$r_t = \ln(1+R_t) = \ln(\frac{P_t}{P_{t-1}} ) = \ln(P_t) - \ln(P_{t-1})$$
+
+> Predicting price isn’t all that useful. Predicting returns is.
+
+> Some notes. This can be viewed as exact first-order difference on the log price. It’s nice for a few reasons.
+
+  --  It’s symmetrical, meaning that if you reverse the time series it just flips the signs.
+
+  --  You can sum sequential r[t] to get the cumulative log returns over a period.
+  
+  --  Log returns are very similar numerically to returns, and are monotonic with them
+
+  --  Any transformation you do to predict log returns maps back to a valid (positive) price, because the reverse transform involves the exponent. That’s not true with log-returns.
+
+>To a first order approximation, for a really small time scale (like daily returns or hourly returns), the expected value of both returns and log returns is 0, which is also nice.
+
+>If this is your first rodeo, I’d do log-returns because they’re easier to manipulate. 
 
 ```{r}
-library(TSA)
-y = ts(df$Open, order.by= df$toDate)
-plot(y)
+
 ```
