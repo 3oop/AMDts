@@ -9,22 +9,100 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## The Data
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+The data was downloaded from NASDAQ official website.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+We will view the data first to see what must be done with it.
 
-```{r cars}
-summary(cars)
+```{r}
+df = read.csv("HistoricalData_1704473693714.csv")
+str(df)
+summary(df)
 ```
 
-## Including Plots
+we have a Date column which is stored as chr type. we will convert it to a datetime object.
+We have numerical columns which are stored as chr because of presence of a dollar sign, which we have to remove then convert them to numeric.
 
-You can also embed plots, for example:
+Data does not show any missing records, but we will examine Date column for any missing days.
+Since missing days are probably the days that the market is closed, we can argue that holidays do not count as missing data.
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+### Prepros
+
+-- Changing time from chr type to POSIXlt datetime class
+
+```{r}
+df$Date <- strptime(df$Date, format = "%m/%d/%Y")
+str(df) 
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+-- Changing chr fields to num
+
+```{r}
+rmvdollar <- function(x){return(gsub("\\$", "", x))}
+
+df$Low <- as.numeric(rmvdollar(df$Low))
+df$Open <- as.numeric(rmvdollar(df$Open))
+df$High <- as.numeric(rmvdollar(df$High))
+df$Close.Last <- as.numeric(rmvdollar(df$Close.Last))
+
+str(df)i
+```
+
+-- Plotting to examine trends
+
+```{r , fig.height=15 , fig.width=10}
+par(mfrow=c(4,1))
+for(i in 1:5){
+  if(is.numeric(df[,i])){
+    plot(
+      df$Date,
+      df[,i],
+      type = "l",
+      xlab="Time (Day)",
+      ylab = paste(colnames(df)[i], if(i == 3) " (# of Shares)"  else "(USD $)" )
+    )
+  }
+}
+```
+
+We can argue an exponential trend for USD variables. 
+
+```{r , fig.height=10 , fig.width=10}
+par(mfrow=c(3,1))
+for(i in 1:5){
+  if(all(class(df[,i]) == "numeric")){
+    plot(
+      df$Date,
+      log(df[,i]),
+      type = "l",
+      xlab="Time (Day)",
+      ylab = paste("Log of " , colnames(df)[i])
+    )
+  }
+}
+```
+
+it still has a trend. what should we do?
+
+```{r , fig.height=10 , fig.width=10}
+par(mfrow=c(3,1))
+for(i in 1:5){
+  if(all(class(df[,i]) == "numeric")){ ## Using all() to avoid a warning
+    plot(
+      df$Date,
+      log(log(df[,i])),
+      type = "l",
+      xlab="Time (Day)",
+      ylab = paste("Log of Log of " , colnames(df)[i])
+    )
+  }
+}
+```
+
+
+```{r}
+library(TSA)
+y = ts(df$Open, order.by= df$toDate)
+plot(y)
+```
