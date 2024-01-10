@@ -104,7 +104,7 @@ for(i in 1:5){
 Let's plot a first difference to see whats what.
 
 ```{r , fig.height=10 , fig.width=10}
-par(mfrow=c(3,1))
+par(mfrow=c(3,2))
 for(i in 1:5){
   if(all(class(df[,i]) == "numeric")){ ## Using all() to avoid a warning
     y = df[,i]
@@ -115,21 +115,15 @@ for(i in 1:5){
       # c(0,diff(df[,i])), equiv
       type = "p",
       xlab="Time (Day)",
-      ylab = paste("Log of Log of " , colnames(df)[i])
+      ylab = paste("First Difference of " , colnames(df)[i])
     )
-  }
-}
-```
-
-```{r , fig.height=10 , fig.width=15}
-par(mfrow=c(3,2))
-for(i in 1:5){
-  if(all(class(df[,i]) == "numeric")){ ## Using all() to avoid a warning
-    y = log(df[,i])
-    dy = diff(y)
-    #plot(df$Date, y)
-    plot(df$Date, c(0,dy))
-    acf(c(0,dy))
+    plot(
+      df$Date,
+      dy - zlag(dy),
+      type = "p",
+      xlab="Time (Day)",
+      ylab = paste("Second Difference of " , colnames(df)[i])
+    )
   }
 }
 ```
@@ -177,5 +171,32 @@ $$r_t = \ln(1+R_t) = \ln(\frac{P_t}{P_{t-1}} ) = \ln(P_t) - \ln(P_{t-1})$$
 >If this is your first rodeo, I’d do log-returns because they’re easier to manipulate. 
 
 ```{r}
+df$return.last <- df$Close.Last/zlag(df$Close.Last) - 1
 
+plot(
+  df$Date,
+  df$return.last,
+  type = "p",
+  xlab="Time (Day)",
+  ylab = paste("Return of Close last")
+)
 ```
+
+### Log Return
+
+```{r , fig.height=10 , fig.width=15}
+par(mfrow=c(3,2))
+for(i in 1:5){
+  if(all(class(df[,i]) == "numeric")){ ## Using all() to avoid a warning
+    y = log(df[,i])
+    dy = diff(y)
+    #plot(df$Date, y)
+    plot(df$Date, c(0,dy))
+    pacf(c(0,dy))
+  }
+}
+```
+
+
+# Model Specification
+
