@@ -200,3 +200,6 @@ for(i in 1:5){
 
 # Model Specification
 
+# Estimation
+
+# Forcast
